@@ -20,6 +20,8 @@ backend/app.db
 # Backend uploads and media
 backend/uploads/*
 !backend/uploads/.gitkeep
+backend/reports/*
+!backend/reports/.gitkeep
 *.mp4
 *.avi
 *.mov

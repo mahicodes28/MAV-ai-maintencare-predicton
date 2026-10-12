@@ -1,11 +1,12 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 
-// Change this to your machine's IP address when running on an actual device
-const BASE_URL = 'http://192.168.1.8:8000';
+// Production Render backend URL with environment variable override
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://mav-ai-backend.onrender.com';
 
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
 });
 
 export const getMachines = async () => {
@@ -40,11 +41,24 @@ export const getInspections = async (machineId: number) => {
 
 export const uploadVideo = async (machineId: number, uri: string, name: string) => {
   const formData = new FormData();
-  formData.append('file', {
-    uri: uri,
-    name: name,
-    type: 'video/mp4'
-  } as any);
+  
+  if (Platform.OS === 'web') {
+    // On web, fetch URI blob or use standard browser file
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      formData.append('file', blob, name);
+    } catch {
+      formData.append('file', { uri, name, type: 'video/mp4' } as any);
+    }
+  } else {
+    // On native mobile (Android / iOS)
+    formData.append('file', {
+      uri: uri,
+      name: name,
+      type: 'video/mp4'
+    } as any);
+  }
   
   try {
     const response = await api.post(`/inspections/${machineId}/upload`, formData, {

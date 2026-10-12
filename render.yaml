@@ -10,3 +10,16 @@ services:
         value: 3.11.9
     plan: free
     autoDeploy: true
+
+  - type: web
+    name: mav-ai-web
+    env: static
+    rootDir: mobile
+    buildCommand: npm install && npx expo export -p web
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    plan: free
+    autoDeploy: true

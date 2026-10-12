@@ -64,7 +64,7 @@ def analyze_vibration(signal, fps):
     rms = np.sqrt(np.mean(np.square(signal)))
     
     return {
-        'dominant_freq_hz': dominant_freq,
-        'amplitude_pixels': amplitude,
-        'rms_pixels': rms
+        'dominant_freq_hz': float(dominant_freq),
+        'amplitude_pixels': float(amplitude),
+        'rms_pixels': float(rms)
     }

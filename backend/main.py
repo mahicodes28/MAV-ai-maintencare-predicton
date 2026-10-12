@@ -5,18 +5,22 @@ from typing import List
 import os
 
 import models
-import models
 import schemas
 from database import SessionLocal, engine, get_db
 from report_generator import generate_pdf_report
 from video_processor import extract_motion_signal, analyze_vibration
+from seed import seed
 import shutil
 
 from fastapi.middleware.cors import CORSMiddleware
 
 models.Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Machine Health Monitoring API")
+app = FastAPI(
+    title="MAV AI Maintenance Predictor API",
+    description="Vibration analysis, anomaly detection, and maintenance health prediction system",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,6 +29,34 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def on_startup():
+    models.Base.metadata.create_all(bind=engine)
+    try:
+        seed()
+    except Exception as e:
+        print(f"Startup seed notice: {e}")
+
+@app.get("/")
+def read_root():
+    return {
+        "status": "healthy",
+        "service": "MAV AI Maintenance Predictor API",
+        "version": "1.0.0",
+        "docs_url": "/docs",
+        "openapi_url": "/openapi.json",
+        "endpoints": {
+            "machines": "/machines/",
+            "inspections": "/inspections/{machine_id}",
+            "upload_video": "/inspections/{machine_id}/upload",
+            "reports": "/reports/{inspection_id}"
+        }
+    }
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "service": "mav-ai-backend"}
 
 @app.post("/machines/", response_model=schemas.Machine)
 def create_machine(machine: schemas.MachineCreate, db: Session = Depends(get_db)):
