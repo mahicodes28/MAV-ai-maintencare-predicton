@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Activity, AlertTriangle, CheckCircle, Plus, X } from 'lucide-react-native';
-import { getMachines, createMachine } from '../api';
+import { Activity, AlertTriangle, CheckCircle, Plus, X, Trash2 } from 'lucide-react-native';
+import { getMachines, createMachine, deleteMachine } from '../api';
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -65,6 +65,33 @@ export default function Dashboard({ navigation }: Props) {
     }
   };
 
+  const confirmDelete = async (machineId: number, machineName: string) => {
+    try {
+      await deleteMachine(machineId);
+      await fetchMachines();
+      Alert.alert('Deleted', `"${machineName}" was removed.`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete machine.');
+    }
+  };
+
+  const handleDeleteMachine = (machineId: number, machineName: string) => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to delete "${machineName}"?`)) {
+        confirmDelete(machineId, machineName);
+      }
+    } else {
+      Alert.alert(
+        'Delete Equipment',
+        `Are you sure you want to delete "${machineName}"? This will also remove its inspection records.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: () => confirmDelete(machineId, machineName) },
+        ]
+      );
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -121,8 +148,19 @@ export default function Dashboard({ navigation }: Props) {
                   <Text style={styles.machineDate}>Type: {machine.type || 'N/A'}</Text>
                   <Text style={styles.machineLocation}>Location: {machine.location || 'N/A'}</Text>
                 </View>
-                <View style={styles.statusBadge}>
-                    <CheckCircle color="#10B981" size={28} />
+                <View style={styles.actionsGroup}>
+                  <View style={styles.statusBadge}>
+                    <CheckCircle color="#10B981" size={24} />
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.deleteIconButton} 
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleDeleteMachine(machine.id, machine.name);
+                    }}
+                  >
+                    <Trash2 color="#EF4444" size={20} />
+                  </TouchableOpacity>
                 </View>
               </LinearGradient>
             </TouchableOpacity>
@@ -288,10 +326,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#A1A1AA',
   },
+  actionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   statusBadge: {
-    padding: 10,
+    padding: 8,
     backgroundColor: '#09090B',
     borderRadius: 12,
+  },
+  deleteIconButton: {
+    padding: 8,
+    backgroundColor: '#1C1917',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#7F1D1D',
   },
   sectionHeaderRow: {
     flexDirection: 'row',

@@ -78,6 +78,20 @@ def read_machine(machine_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Machine not found")
     return db_machine
 
+@app.delete("/machines/{machine_id}")
+def delete_machine(machine_id: int, db: Session = Depends(get_db)):
+    db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
+    if db_machine is None:
+        raise HTTPException(status_code=404, detail="Machine not found")
+    
+    # Cascade delete associated inspections and baselines
+    db.query(models.Inspection).filter(models.Inspection.machine_id == machine_id).delete()
+    db.query(models.Baseline).filter(models.Baseline.machine_id == machine_id).delete()
+    
+    db.delete(db_machine)
+    db.commit()
+    return {"message": f"Machine {machine_id} successfully deleted", "id": machine_id}
+
 def process_video_background(inspection_id: int, db: Session):
     inspection = db.query(models.Inspection).filter(models.Inspection.id == inspection_id).first()
     if not inspection:

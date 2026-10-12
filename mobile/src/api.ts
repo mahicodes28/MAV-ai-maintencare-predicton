@@ -39,6 +39,16 @@ export const getMachine = async (machineId: number) => {
   }
 };
 
+export const deleteMachine = async (machineId: number) => {
+  try {
+    const response = await api.delete(`/machines/${machineId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error deleting machine ${machineId}:`, error);
+    throw error;
+  }
+};
+
 export const getInspections = async (machineId: number) => {
   try {
     const response = await api.get(`/inspections/${machineId}`);

@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Linking, Alert, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Video, BarChart2, FileText, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { Video, BarChart2, FileText, AlertTriangle, CheckCircle, Trash2 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import api, { getInspections, uploadVideo } from '../api';
+import api, { getInspections, uploadVideo, deleteMachine } from '../api';
 
 type Props = {
   route: any;
+  navigation: any;
 };
 
-export default function MachineDetails({ route }: Props) {
+export default function MachineDetails({ route, navigation }: Props) {
   const { machineId, name } = route.params;
   const [inspections, setInspections] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +62,33 @@ export default function MachineDetails({ route }: Props) {
       } catch (e) {
         Alert.alert("Error", "Failed to upload video.");
       }
+    }
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteMachine(parseInt(machineId, 10));
+      Alert.alert('Deleted', `"${name}" was deleted successfully.`);
+      navigation.goBack();
+    } catch (e) {
+      Alert.alert('Error', 'Failed to delete machine.');
+    }
+  };
+
+  const handleDelete = () => {
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(`Are you sure you want to delete "${name}"?`)) {
+        confirmDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete Machine',
+        `Are you sure you want to delete "${name}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: confirmDelete },
+        ]
+      );
     }
   };
 
@@ -149,6 +177,15 @@ export default function MachineDetails({ route }: Props) {
       >
         <FileText color="#A1A1AA" size={20} style={{ marginRight: 10 }} />
         <Text style={styles.reportButtonText}>Generate PDF Report</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={styles.deleteButton} 
+        activeOpacity={0.8}
+        onPress={handleDelete}
+      >
+        <Trash2 color="#EF4444" size={20} style={{ marginRight: 10 }} />
+        <Text style={styles.deleteButtonText}>Delete Equipment</Text>
       </TouchableOpacity>
 
     </ScrollView>
@@ -265,10 +302,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#3F3F46',
-    marginBottom: 40,
+    marginBottom: 16,
   },
   reportButtonText: {
     color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1C1917',
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#7F1D1D',
+    marginBottom: 40,
+  },
+  deleteButtonText: {
+    color: '#EF4444',
     fontWeight: '600',
     fontSize: 16,
   },
