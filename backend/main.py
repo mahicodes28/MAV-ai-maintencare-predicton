@@ -72,6 +72,7 @@ def read_machines(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
     return machines
 
 @app.get("/machines/{machine_id}", response_model=schemas.Machine)
+@app.get("/machines/{machine_id}/", response_model=schemas.Machine)
 def read_machine(machine_id: int, db: Session = Depends(get_db)):
     db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
     if db_machine is None:
@@ -79,6 +80,7 @@ def read_machine(machine_id: int, db: Session = Depends(get_db)):
     return db_machine
 
 @app.delete("/machines/{machine_id}")
+@app.delete("/machines/{machine_id}/")
 def delete_machine(machine_id: int, db: Session = Depends(get_db)):
     db_machine = db.query(models.Machine).filter(models.Machine.id == machine_id).first()
     if db_machine is None:
