@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
-import { Activity, AlertTriangle, CheckCircle } from 'lucide-react-native';
-import { getMachines } from '../api';
+import { Activity, AlertTriangle, CheckCircle, Plus, X } from 'lucide-react-native';
+import { getMachines, createMachine } from '../api';
 
 type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Dashboard'>;
 
@@ -15,6 +15,12 @@ type Props = {
 export default function Dashboard({ navigation }: Props) {
   const [machines, setMachines] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [name, setName] = useState('');
+  const [type, setType] = useState('');
+  const [location, setLocation] = useState('');
+  const [details, setDetails] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchMachines();
@@ -31,6 +37,34 @@ export default function Dashboard({ navigation }: Props) {
       setLoading(false);
     }
   };
+
+  const handleAddMachine = async () => {
+    if (!name.trim() || !type.trim() || !location.trim()) {
+      Alert.alert('Validation Error', 'Please fill in Name, Type, and Location.');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await createMachine({
+        name: name.trim(),
+        type: type.trim(),
+        location: location.trim(),
+        details: details.trim() || undefined,
+      });
+      setName('');
+      setType('');
+      setLocation('');
+      setDetails('');
+      setModalVisible(false);
+      await fetchMachines();
+      Alert.alert('Success', 'New machine added successfully!');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add machine. Please check network connection.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -52,7 +86,17 @@ export default function Dashboard({ navigation }: Props) {
         </LinearGradient>
       </View>
 
-      <Text style={styles.sectionTitle}>Recent Inspections</Text>
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Equipment Registry</Text>
+        <TouchableOpacity 
+          style={styles.addButton} 
+          activeOpacity={0.8}
+          onPress={() => setModalVisible(true)}
+        >
+          <Plus color="#FFFFFF" size={18} />
+          <Text style={styles.addButtonText}>Add Machine</Text>
+        </TouchableOpacity>
+      </View>
       
       <View style={styles.listContainer}>
         {loading ? (
@@ -75,6 +119,7 @@ export default function Dashboard({ navigation }: Props) {
                 <View style={styles.machineInfo}>
                   <Text style={styles.machineName}>{machine.name}</Text>
                   <Text style={styles.machineDate}>Type: {machine.type || 'N/A'}</Text>
+                  <Text style={styles.machineLocation}>Location: {machine.location || 'N/A'}</Text>
                 </View>
                 <View style={styles.statusBadge}>
                     <CheckCircle color="#10B981" size={28} />
@@ -84,6 +129,82 @@ export default function Dashboard({ navigation }: Props) {
           ))
         )}
       </View>
+
+      {/* Add Machine Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Equipment</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <X color="#A1A1AA" size={22} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.inputLabel}>Machine Name *</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. Hydraulic Pump #3"
+              placeholderTextColor="#71717A"
+              value={name}
+              onChangeText={setName}
+            />
+
+            <Text style={styles.inputLabel}>Equipment Type *</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. Pump, Motor, Turbine"
+              placeholderTextColor="#71717A"
+              value={type}
+              onChangeText={setType}
+            />
+
+            <Text style={styles.inputLabel}>Location *</Text>
+            <TextInput
+              style={styles.textInput}
+              placeholder="e.g. Floor 2, Sector B"
+              placeholderTextColor="#71717A"
+              value={location}
+              onChangeText={setLocation}
+            />
+
+            <Text style={styles.inputLabel}>Details / Specifications</Text>
+            <TextInput
+              style={[styles.textInput, { height: 70 }]}
+              placeholder="Optional notes or operational ratings"
+              placeholderTextColor="#71717A"
+              multiline
+              value={details}
+              onChangeText={setDetails}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelButton} 
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.saveButton, submitting && { opacity: 0.6 }]} 
+                onPress={handleAddMachine}
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>Save Machine</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -171,5 +292,100 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: '#09090B',
     borderRadius: 12,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 6,
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  machineLocation: {
+    fontSize: 12,
+    color: '#71717A',
+    marginTop: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#18181B',
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#27272A',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#A1A1AA',
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  textInput: {
+    backgroundColor: '#09090B',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    color: '#FFFFFF',
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#3F3F46',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 24,
+  },
+  cancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#3F3F46',
+  },
+  cancelButtonText: {
+    color: '#A1A1AA',
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minWidth: 110,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

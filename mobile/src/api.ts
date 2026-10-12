@@ -19,6 +19,16 @@ export const getMachines = async () => {
   }
 };
 
+export const createMachine = async (machineData: { name: string; type: string; location: string; details?: string }) => {
+  try {
+    const response = await api.post('/machines/', machineData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating machine:', error);
+    throw error;
+  }
+};
+
 export const getMachine = async (machineId: number) => {
   try {
     const response = await api.get(`/machines/${machineId}`);
